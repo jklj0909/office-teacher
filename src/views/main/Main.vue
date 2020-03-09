@@ -113,21 +113,23 @@
             }
         },
         mounted() {
-            //防止未登录用户通过导航栏访问页面
-            const requireNoLoginList = ['/profile/login', '/index'];
+            const requireNoLoginList = ['/profile/login'];
             this.$router.onReady(() => {
                 if (requireNoLoginList.indexOf(this.$route.path) == -1) {
                     this.isShow = false;
+                    this.$Spin.show();
                     request({
                         url: '/teacher/checkLogin',
                         method: "get"
                     }).then(({data}) => {
                         this.$store.commit("afterLogin", data.info);
                         this.isShow = true;
+                        this.$Spin.hide();
                     }).catch(() => {
                         this.$Message.error("请登录后再尝试操作");
                         this.$router.push('/profile/login');
                         this.isShow = true;
+                        this.$Spin.hide();
                     });
                 }
             });

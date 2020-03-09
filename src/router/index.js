@@ -35,7 +35,7 @@ const routes = [
         component: AddingQuestion,
     },
     {
-        path: '/manage/initialize/word/:questionId',
+        path: '/manage/initialize/:type/:questionId',
         component: InitializeQuestion,
     }
 ];

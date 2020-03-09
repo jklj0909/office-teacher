@@ -31,7 +31,7 @@
                     input: "",
                     textarea: "",
                     radio: ""
-                }
+                },
             }
         },
         methods: {
@@ -46,12 +46,21 @@
                         username: this.$store.state.user.username
                     }
                 }).then(({data}) => {
-                    console.log(data);
-                }).catch(() => {
-                    this.$Message.error("创建失败,请稍后重试");
+                    this.$Message.success("创建成功");
+                    this.$router.push("/manage/initialize/" + radio + "/" + data.message);
+                }).catch(({response}) => {
+                    this.$Message.error(response.data.message);
                 })
             },
             handClick(title, description, radio) {
+                if (title == "" || description == "" || radio == "") {
+                    this.$Message.error("请将信息填写完整");
+                    return;
+                }
+                if (title.length >= 128 || description.length >= 1024) {
+                    this.$Message.error("题目或者描述信息过长");
+                    return;
+                }
                 this.createQuestion(title, description, radio)
             }
         }
