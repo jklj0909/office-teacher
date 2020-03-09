@@ -9,6 +9,8 @@ Router.prototype.push = function push(location, onResolve, onReject) {
 const Index = () => import('views/main/content/index');
 const Login = () => import('views/main/content/user/Login');
 const UserInfo = () => import('views/main/content/user/UserInfo');
+const AddingQuestion = () => import('views/main/content/manage/AddQuestion');
+const InitializeQuestion = () => import('views/main/content/manage/InitializeQuestion');
 Vue.use(Router);
 
 const routes = [
@@ -18,15 +20,23 @@ const routes = [
     },
     {
         path: '/index',
-        component: Index
+        component: Index,
     },
     {
         path: '/profile/login',
-        component: Login
+        component: Login,
     },
     {
         path: '/profile/info',
-        component: UserInfo
+        component: UserInfo,
+    },
+    {
+        path: '/manage/add',
+        component: AddingQuestion,
+    },
+    {
+        path: '/manage/initialize/word/:questionId',
+        component: InitializeQuestion,
     }
 ];
 const router = new Router({

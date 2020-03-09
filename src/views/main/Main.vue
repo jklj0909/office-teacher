@@ -43,7 +43,7 @@
                     </Breadcrumb>
                     <!--路由的页面-->
                     <Content :style="{padding: '24px', minHeight: '300px', background: '#fff'}">
-                        <router-view/>
+                        <router-view v-show="isShow"/>
                     </Content>
                 </Layout>
             </Layout>
@@ -63,6 +63,7 @@
         },
         data() {
             return {
+                isShow: true,
                 slider: [
                     {
                         childList: [{name: 'login', content: '登录', requireLogin: false, link: '/profile/login'},
@@ -71,6 +72,13 @@
                         content: '账户',
                         name: 'profile',
                         requireLogin: false
+                    },
+                    {
+                        childList: [{name: 'addQuestion', content: '添加试题', requireLogin: true, link: '/manage/add'}],
+                        iconType: 'ios-add-circle-outline',
+                        content: '试题管理',
+                        name: 'manageQuestion',
+                        requireLogin: true
                     }
                 ],
             }
@@ -104,15 +112,25 @@
                 }
             }
         },
-        created() {
-            request({
-                url: '/teacher/checkLogin',
-                method: "get"
-            }).then(({data}) => {
-                this.$store.commit("afterLogin", data.info);
-            }).catch(() => {
-                this.$router.push('/profile/login');
-            })
+        mounted() {
+            //防止未登录用户通过导航栏访问页面
+            const requireNoLoginList = ['/profile/login', '/index'];
+            this.$router.onReady(() => {
+                if (requireNoLoginList.indexOf(this.$route.path) == -1) {
+                    this.isShow = false;
+                    request({
+                        url: '/teacher/checkLogin',
+                        method: "get"
+                    }).then(({data}) => {
+                        this.$store.commit("afterLogin", data.info);
+                        this.isShow = true;
+                    }).catch(() => {
+                        this.$Message.error("请登录后再尝试操作");
+                        this.$router.push('/profile/login');
+                        this.isShow = true;
+                    });
+                }
+            });
         }
     }
 </script>
