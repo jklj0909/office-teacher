@@ -9,9 +9,9 @@
             <Button style="float: right" type="success" shape="circle" v-else>完成</Button>
         </Row>
         <br>
-        <Row type="flex" align="top" :gutter="32">
+        <Row type="flex" align="top" :gutter="64">
             <!--左边是关于试题的信息-->
-            <Col span="12">
+            <Col span="11">
             <Row><span>标题</span></Row>
             <br>
             <Row><Input v-model="title" readonly></Input></Row>
@@ -23,7 +23,17 @@
             </Row>
             </Col>
             <!--右边是操作部分-->
-            <Col span="12">
+            <Col span="11">
+            <div style="text-align: center" v-show="state>=1&&state<=30">
+                <span style="color: #3399ff" v-show="step>1"><a @click="goToPageOne"
+                                                                href="javascript:void(0);">前往第1步</a>&nbsp;</span>
+                <span style="color: #c3cbd6">|&nbsp;</span>
+                <span style="font-family: 宋体;color: #464c5b;font-weight: bold">这是步骤{{state}},您已完成前{{step-1}}个步骤</span>
+                <span style="color: #c3cbd6">&nbsp;|</span>
+                <span style="color: #3399ff" v-show="step>1&&step<=31">&nbsp;<a @click="goToLatestPage"
+                                                                                href="javascript:void(0);">前往第{{step}}步</a></span>
+            </div>
+            <br/>
             <div v-show="state==-1">
                 <Row>
                     <div class="upload-instruction">
@@ -54,7 +64,7 @@
                     <br/>
                     <Upload :action="stepUploadUrl+'/0'" :max-size="4*1024" :multiple="true" :on-success="onSuccess"
                             :on-error="onError" :on-exceeded-size="exceedSize" :on-format-error="formatError"
-                            :format="['docx','xlsx','pptx']">
+                            :format="[format]">
                         <Button icon="ios-cloud-upload-outline">上传文件</Button>
                     </Upload>
                 </Row>
@@ -76,7 +86,7 @@
                     <Upload :action="stepUploadUrl+'/'+state" :max-size="4*1024" :multiple="true"
                             :on-success="onSuccess"
                             :on-error="onError" :on-exceeded-size="exceedSize" :on-format-error="formatError"
-                            :format="['docx','xlsx','pptx']">
+                            :format="[format]" :show-upload-list="false">
                         <Button icon="ios-cloud-upload-outline">上传文件</Button>
                     </Upload>
                 </Row>
@@ -101,14 +111,22 @@
                 title: "",
                 description: "",
                 type: "",
+                format: "",
                 rawUploadUrl: "http://localhost:8083/mark/upload/raw/",
                 stepUploadUrl: "http://localhost:8083/mark/upload/step/",
-                stepDescription: "",
+                stepDescription: ""
             }
         },
         mounted() {
             this.questionId = this.$route.params.questionId;
             this.type = this.$route.params.type;
+            if (this.type == "word") {
+                this.format = "docx";
+            } else if (this.type == "ppt") {
+                this.format = "pptx";
+            } else if (this.type == "excel") {
+                this.format = "xlsx";
+            }
             this.rawUploadUrl += this.type + "/" + this.questionId;
             this.stepUploadUrl += this.type + "/" + this.questionId;
             this.checkIdIfExists(this.questionId);
@@ -123,6 +141,7 @@
                     this.step = data.info.state;
                     this.title = data.info.title;
                     this.description = data.info.description;
+                    this.stepDescription = data.message;
                     if (this.step > -1) {
                         this.$Message.info({
                             content: "已跳转到最新等待完成的步骤"
@@ -134,16 +153,44 @@
                     }
                     this.$router.push("/index");
                 });
-
+            },
+            getStepDescription() {
+                request({
+                    url: '/mark/getStepDescription',
+                    method: 'get',
+                    params: {
+                        id: this.questionId,
+                        step: this.state,
+                        type: this.type
+                    }
+                }).then(({data}) => {
+                    this.stepDescription = data.message;
+                }).catch(() => {
+                    this.stepDescription = "";
+                })
             },
             toLastState() {
                 if (this.state > -1) {
                     this.state--;
+                    this.getStepDescription();
                 }
             },
             toNextState() {
                 if (this.state < 31) {
                     this.state++;
+                    this.getStepDescription();
+                }
+            },
+            goToPageOne() {
+                if (this.step > 1) {
+                    this.state = 1;
+                    this.getStepDescription();
+                }
+            },
+            goToLatestPage() {
+                if (this.step < 31) {
+                    this.state = this.step;
+                    this.getStepDescription();
                 }
             },
             onSuccess(response) {
@@ -160,19 +207,28 @@
                 this.$Message.error("文件格式错误");
             },
             submitStepDescription(stepDescription) {
+                if (stepDescription == null || stepDescription == "") {
+                    this.$Message.error("请输入步骤说明");
+                    return;
+                }
+                if (stepDescription.length >= 127) {
+                    this.$Message.error("步骤说明过长,请限制在128个字以内");
+                    return;
+                }
                 request({
                     url: '/mark/stepDescription',
                     method: 'post',
                     data: {
-                        Id: this.questionId,
+                        id: this.questionId,
                         //当前业对应的步骤
                         step: this.state,
-                        QuestionType: this.type
+                        questionType: this.type,
+                        stepDescription: stepDescription
                     }
                 }).then(() => {
-
+                    this.$Message.success("已提交");
                 }).catch(() => {
-
+                    this.$Message.error("出现未知错误,请稍后再试");
                 })
             }
         }
