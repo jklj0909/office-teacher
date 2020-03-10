@@ -1,8 +1,11 @@
 <template>
     <div>
         <Row>
-            <Button style="float: left" type="primary" shape="circle" v-show="state>=0">上一步</Button>
-            <Button style="float: right" type="primary" shape="circle" v-if="state<30">下一步</Button>
+            <Button style="float: left" type="primary" shape="circle" v-show="state>=0" @click="toLastState">上一步
+            </Button>
+            <Button style="float: right" type="primary" shape="circle" v-if="state<=30" :disabled="step<=state"
+                    @click="toNextState">下一步
+            </Button>
             <Button style="float: right" type="success" shape="circle" v-else>完成</Button>
         </Row>
         <br>
@@ -21,27 +24,62 @@
             </Col>
             <!--右边是操作部分-->
             <Col span="12">
-            <div v-if="state==-1">
+            <div v-show="state==-1">
                 <Row>
                     <div class="upload-instruction">
                         请在此处上传素材文件,请注意:<br/>
                         1.word的版本请使用docx的新版本,否则将无法进行文档的比对。<br/>
-                        2.请将作为word、excel、ppt命名为“raw”以方便识别。<br/>
-                        3.请将学生答题所需要的所有资源(包括raw.docx)压缩成rar或zip文件再上传(限制大小为20MB)。
+                        2.请将学生答题所需要的所有资源(包括raw.docx)压缩成rar或zip文件再上传(限制大小为20MB)。
                     </div>
                     <br/>
                     <br/>
-                    <Upload :action="uploadUrl" :max-size="20*1024" :multiple="true" :on-success="onSuccess"
+                    <Upload :action="rawUploadUrl" :max-size="20*1024" :multiple="true" :on-success="onSuccess"
                             :on-error="onError" :on-exceeded-size="exceedSize" :on-format-error="formatError"
                             :format="['rar','zip']">
                         <Button icon="ios-cloud-upload-outline">上传文件</Button>
                     </Upload>
                 </Row>
-                <br>
-                <Row></Row>
             </div>
-            <div v-else>
-
+            <div v-show="state==0">
+                <Row>
+                    <div class="upload-instruction">
+                        请在此处上传初始状态的word、excel或者ppt,请注意:<br/>
+                        1.word的版本请使用docx的新版本,否则将无法进行文档的比对。<br/>
+                        2.限制大小为4MB<br/>
+                        3.请将题目要求的操作分成30个步骤完成,并将每一次增量后的文档在之后的页面上传
+                        (每一次提交的文档都是在前一步的基础上操作，否则将会使得判卷失效)<br/>
+                        4.重新上传将会自动删除后面步骤上传的所有文件(无论本次上传失败与否)。
+                    </div>
+                    <br/>
+                    <br/>
+                    <Upload :action="stepUploadUrl+'/0'" :max-size="4*1024" :multiple="true" :on-success="onSuccess"
+                            :on-error="onError" :on-exceeded-size="exceedSize" :on-format-error="formatError"
+                            :format="['docx','xlsx','pptx']">
+                        <Button icon="ios-cloud-upload-outline">上传文件</Button>
+                    </Upload>
+                </Row>
+            </div>
+            <div v-show="state>0">
+                <Row>
+                    <div class="upload-instruction">
+                        请在此处填入该步骤的操作说明以方便学生检错<br/>
+                    </div>
+                    <br/>
+                    <Input v-model="stepDescription" placeholder="请输入操作说明"></Input><br/><br/>
+                    <Button type="primary" @click="submitStepDescription(stepDescription)">提交说明</Button>
+                    <br/><br/>
+                    <div class="upload-instruction">
+                        请在此处上传每一步的word、excel或者ppt,请注意:<br/>
+                        1.重新上传将会自动删除后面步骤上传的所有文件(无论本次上传失败与否)。
+                    </div>
+                    <br/>
+                    <Upload :action="stepUploadUrl+'/'+state" :max-size="4*1024" :multiple="true"
+                            :on-success="onSuccess"
+                            :on-error="onError" :on-exceeded-size="exceedSize" :on-format-error="formatError"
+                            :format="['docx','xlsx','pptx']">
+                        <Button icon="ios-cloud-upload-outline">上传文件</Button>
+                    </Upload>
+                </Row>
             </div>
             </Col>
         </Row>
@@ -56,17 +94,23 @@
         data() {
             return {
                 questionId: "",
+                //当前所在的页码
                 state: -1,
+                //数据库存储的状态,标示最新等待完成的步骤
+                step: -1,
                 title: "",
                 description: "",
                 type: "",
-                uploadUrl: "http://localhost:8083/mark/upload/raw/"
+                rawUploadUrl: "http://localhost:8083/mark/upload/raw/",
+                stepUploadUrl: "http://localhost:8083/mark/upload/step/",
+                stepDescription: "",
             }
         },
         mounted() {
             this.questionId = this.$route.params.questionId;
             this.type = this.$route.params.type;
-            this.uploadUrl += this.type + "/" + this.questionId;
+            this.rawUploadUrl += this.type + "/" + this.questionId;
+            this.stepUploadUrl += this.type + "/" + this.questionId;
             this.checkIdIfExists(this.questionId);
         },
         methods: {
@@ -76,15 +120,35 @@
                     method: 'get',
                 }).then(({data}) => {
                     this.state = data.info.state;
+                    this.step = data.info.state;
                     this.title = data.info.title;
                     this.description = data.info.description;
-                }).catch(() => {
-                    this.$Message.error("试题不存在,请重新创建");
+                    if (this.step > -1) {
+                        this.$Message.info({
+                            content: "已跳转到最新等待完成的步骤"
+                        })
+                    }
+                }).catch(({response}) => {
+                    if (response.data.message != "not_login") {
+                        this.$Message.error(response.data.message);
+                    }
                     this.$router.push("/index");
                 });
+
             },
-            onSuccess() {
+            toLastState() {
+                if (this.state > -1) {
+                    this.state--;
+                }
+            },
+            toNextState() {
+                if (this.state < 31) {
+                    this.state++;
+                }
+            },
+            onSuccess(response) {
                 this.$Message.success("上传成功");
+                this.step = response.info;
             },
             onError() {
                 this.$Message.error("上传失败");
@@ -94,6 +158,22 @@
             },
             formatError() {
                 this.$Message.error("文件格式错误");
+            },
+            submitStepDescription(stepDescription) {
+                request({
+                    url: '/mark/stepDescription',
+                    method: 'post',
+                    data: {
+                        Id: this.questionId,
+                        //当前业对应的步骤
+                        step: this.state,
+                        QuestionType: this.type
+                    }
+                }).then(() => {
+
+                }).catch(() => {
+
+                })
             }
         }
     }
