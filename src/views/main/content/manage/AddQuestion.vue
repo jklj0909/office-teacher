@@ -34,6 +34,9 @@
                 },
             }
         },
+        created() {
+            this.$store.commit("updateBreadcrumbItems", ['管理', '新增']);
+        },
         methods: {
             createQuestion(title, description, radio) {
                 request({

@@ -74,7 +74,8 @@
                         requireLogin: false
                     },
                     {
-                        childList: [{name: 'addQuestion', content: '添加试题', requireLogin: true, link: '/manage/add'}],
+                        childList: [{name: 'addQuestion', content: '添加试题', requireLogin: true, link: '/manage/add'},
+                            {name: 'MyQuestion', content: '我的试题', requireLogin: true, link: '/manage/myQuestion'}],
                         iconType: 'ios-add-circle-outline',
                         content: '试题管理',
                         name: 'manageQuestion',
@@ -85,7 +86,7 @@
         },
         computed: {
             breadcrumbItems() {
-                return this.$route.path.split('/');
+                return this.$store.state.breadcrumbItems;
             }
         },
         methods: {

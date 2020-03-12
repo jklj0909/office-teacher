@@ -39,6 +39,9 @@
         components: {
             ValidCode
         },
+        created() {
+            this.$store.commit("updateBreadcrumbItems", ['个人', '登录']);
+        },
         data() {
             return {
                 formInline: {

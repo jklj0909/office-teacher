@@ -11,6 +11,7 @@ const Login = () => import('views/main/content/user/Login');
 const UserInfo = () => import('views/main/content/user/UserInfo');
 const AddingQuestion = () => import('views/main/content/manage/AddQuestion');
 const InitializeQuestion = () => import('views/main/content/manage/InitializeQuestion');
+const MyQuestion = () => import('views/main/content/manage/MyQuestion');
 Vue.use(Router);
 
 const routes = [
@@ -37,6 +38,10 @@ const routes = [
     {
         path: '/manage/initialize/:type/:questionId',
         component: InitializeQuestion,
+    },
+    {
+        path: '/manage/myQuestion',
+        component: MyQuestion
     }
 ];
 const router = new Router({
