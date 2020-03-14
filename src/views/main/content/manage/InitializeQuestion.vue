@@ -47,7 +47,7 @@
                     <br/>
                     <Upload :action="rawUploadUrl" :max-size="20*1024" :multiple="true" :on-success="onSuccess"
                             :on-error="onError" :on-exceeded-size="exceedSize" :on-format-error="formatError"
-                            :format="['rar','zip']">
+                            :format="['rar','zip']" :before-upload="beforeUpload">
                         <Button icon="ios-cloud-upload-outline">上传文件</Button>
                         <span v-show="state<step"><Icon style="margin-left: 5px"
                                                         type="ios-checkmark-circle"></Icon>ok</span>
@@ -68,7 +68,7 @@
                     <br/>
                     <Upload :action="stepUploadUrl+'/0'" :max-size="4*1024" :multiple="true" :on-success="onSuccess"
                             :on-error="onError" :on-exceeded-size="exceedSize" :on-format-error="formatError"
-                            :format="[format]">
+                            :format="[format]" :before-upload="beforeUpload">
                         <Button icon="ios-cloud-upload-outline">上传文件</Button>
                         <span v-show="state<step"><Icon style="margin-left: 5px"
                                                         type="ios-checkmark-circle"></Icon>ok</span>
@@ -92,7 +92,7 @@
                     <Upload :action="stepUploadUrl+'/'+state" :max-size="4*1024" :multiple="true"
                             :on-success="onSuccess"
                             :on-error="onError" :on-exceeded-size="exceedSize" :on-format-error="formatError"
-                            :format="[format]" :show-upload-list="false">
+                            :format="[format]" :show-upload-list="false" :before-upload="beforeUpload">
                         <Button icon="ios-cloud-upload-outline">上传文件</Button>
                         <span v-show="state<step"><Icon style="margin-left: 5px"
                                                         type="ios-checkmark-circle"></Icon>ok</span>
@@ -129,7 +129,7 @@
                 format: "",
                 rawUploadUrl: "http://localhost:8083/mark/upload/raw/",
                 stepUploadUrl: "http://localhost:8083/mark/upload/step/",
-                stepDescription: ""
+                stepDescription: "",
             }
         },
         created() {
@@ -223,6 +223,22 @@
             },
             formatError() {
                 this.$Message.error("文件格式错误");
+            },
+            beforeUpload() {
+                if (this.state < this.step) {
+                    this.$Modal.confirm({
+                        title: "确认框",
+                        content: "在此步骤上传文件会自动删除之后步骤曾经上传过的文件,您确定要这么做吗?",
+                        onOk() {
+                            return true;
+                        },
+                        onCancel() {
+                            this.$Message.success("已取消");
+                            return false;
+                        }
+                    });
+                }
+                return true;
             },
             submitStepDescription(stepDescription) {
                 if (stepDescription == null || stepDescription == "") {
