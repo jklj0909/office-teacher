@@ -73,6 +73,11 @@
                         <span v-show="state<step"><Icon style="margin-left: 5px"
                                                         type="ios-checkmark-circle"></Icon>ok</span>
                     </Upload>
+                    <br/>
+                    <Button @click="downloadStep" v-show="state<step">
+                        <Icon type="md-arrow-down"/>
+                        下载查看
+                    </Button>
                 </Row>
             </div>
             <div v-show="state>0&&state<=30">
@@ -97,6 +102,11 @@
                         <span v-show="state<step"><Icon style="margin-left: 5px"
                                                         type="ios-checkmark-circle"></Icon>ok</span>
                     </Upload>
+                    <br/>
+                    <Button @click="downloadStep" v-show="state<step">
+                        <Icon type="md-arrow-down"/>
+                        下载查看
+                    </Button>
                 </Row>
             </div>
             <div v-show="state==31">
@@ -282,7 +292,30 @@
                     this.$Spin.hide();
                     this.$Message.error(response.data.message);
                 });
-            }
+            },
+            downloadStep() {
+                let filename = this.state + "." + this.format;
+                request({
+                    url: '/mark/download/' + this.type + '/' + this.questionId + '/' + this.state,
+                    method: 'get',
+                    responseType: 'blob',
+                    headers: {
+                        'Content-Type': 'application/json; application/octet-stream'
+                    },
+                }).then(res => {
+                    let blob = new Blob([res.data]);
+                    let downloadElement = document.createElement('a');
+                    let href = window.URL.createObjectURL(blob); //创建下载的链接
+                    downloadElement.href = href;
+                    downloadElement.download = filename; //下载后文件名
+                    document.body.appendChild(downloadElement);
+                    downloadElement.click(); //点击下载
+                    document.body.removeChild(downloadElement); //下载完成移除元素
+                    window.URL.revokeObjectURL(href);
+                }).catch(() => {
+                    this.$Message.error("请求失败,找不到相关文件");
+                })
+            },
         }
     }
 </script>
